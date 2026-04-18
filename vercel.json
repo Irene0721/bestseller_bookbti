@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "functions": {
+    "api/naver.js": { "memory": 128, "maxDuration": 10 },
+    "api/aladin.js": { "memory": 128, "maxDuration": 10 }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Control", "value": "s-maxage=300, stale-while-revalidate=600" }
+      ]
+    }
+  ],
+  "env": {
+    "NAVER_CLIENT_ID": "@naver_client_id",
+    "NAVER_CLIENT_SECRET": "@naver_client_secret"
+  }
+}
