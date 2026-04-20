@@ -1,17 +1,23 @@
 // 네이버 Book Search API - 서버에서만 호출 (Client Secret 보호)
+// 수정: ISBN 검색 시 book_adv.json 사용 (정확한 ISBN 일치 결과 반환)
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET');
 
   const { query, isbn, display = 10, start = 1, sort = 'sim' } = req.query;
 
-  const searchQuery = isbn ? isbn : (query || '');
-  if (!searchQuery) {
+  // ISBN 검색: book_adv.json?d_isbn= (정확 매칭)
+  // 일반 검색: book.json?query= (유사도 검색)
+  let url;
+  if (isbn) {
+    const cleanIsbn = String(isbn).replace(/[^0-9X]/gi, '');
+    if (!cleanIsbn) return res.status(400).json({ error: 'invalid isbn' });
+    url = `https://openapi.naver.com/v1/search/book_adv.json?d_isbn=${encodeURIComponent(cleanIsbn)}&display=${display}`;
+  } else if (query) {
+    url = `https://openapi.naver.com/v1/search/book.json?query=${encodeURIComponent(query)}&display=${display}&start=${start}&sort=${sort}`;
+  } else {
     return res.status(400).json({ error: 'query or isbn required' });
   }
-
-  // sort: sim(유사도), date(출판일), count(판매순) — 베스트셀러에 count 사용
-  const url = `https://openapi.naver.com/v1/search/book.json?query=${encodeURIComponent(searchQuery)}&display=${display}&start=${start}&sort=${sort}`;
 
   try {
     const response = await fetch(url, {
@@ -28,12 +34,12 @@ module.exports = async function handler(req, res) {
     const data = await response.json();
 
     const items = (data.items || []).map(item => ({
-      title:       item.title.replace(/<[^>]*>/g, ''),
-      author:      item.author.replace(/<[^>]*>/g, ''),
+      title:       (item.title||'').replace(/<[^>]*>/g, ''),
+      author:      (item.author||'').replace(/<[^>]*>/g, ''),
       publisher:   item.publisher,
       pubdate:     item.pubdate,
       isbn:        item.isbn,
-      description: item.description.replace(/<[^>]*>/g, ''),
+      description: (item.description||'').replace(/<[^>]*>/g, ''),
       image:       item.image,
       link:        item.link,
       discount:    item.discount,
